@@ -1,0 +1,28 @@
+# Backend runtime for standard CPython 3.13 (64-bit).
+python-dotenv==1.0.0
+pydantic==2.10.6
+
+# LLM APIs (httpx stays below 0.28 for these SDK versions).
+openai==1.30.0
+groq==0.8.0
+httpx==0.27.0
+
+# PDF parsing and image handling with Python 3.13 wheels.
+pymupdf==1.25.5
+pdfplumber==0.11.6
+Pillow==11.2.1
+
+# Text equation extraction and LaTeX parsing.
+antlr4-python3-runtime==4.11.1
+sympy==1.13.3
+
+# API
+fastapi==0.110.0
+uvicorn==0.34.2
+python-multipart==0.0.20
+loguru==0.7.2
+
+# Pix2Tex is optional and is deliberately not installed here: its legacy
+# latex2sympy2 dependency conflicts with SymPy's ANTLR runtime requirement.
+# The existing extractor falls back to text when Pix2Tex is unavailable.
+# Generated experiment dependencies are installed separately inside Docker.
