@@ -63,4 +63,43 @@ def _run_and_store(pdf_path: str, paper_id: str):
         result = run_pipeline(pdf_path, paper_id, on_stage=update_stage)
         results_store[paper_id] = {**result, "status": "complete", "stage": 6}
     except Exception as exc:
-        results_store[paper_id] = {"status": "error", "stage": results_store[paper_id].get("stage", 0), "error": str(exc)}
+        error_details = str(exc)
+        if "groq" in error_details.lower():
+            if "generation_truncated" in error_details.lower():
+                parts = error_details.split("|")
+                filename = parts[1] if len(parts) > 1 else "unknown"
+                error_details = {
+                    "stage": "code_generation",
+                    "provider": "groq",
+                    "error_code": "GENERATION_TRUNCATED",
+                    "filename": filename,
+                    "message": "Generation reached the configured output-token limit.",
+                    "recoverable": False
+                }
+            elif "does not exist" in error_details.lower() or "not available" in error_details.lower() or "model_not_found" in error_details.lower():
+                from config import GROQ_MODEL
+                error_details = {
+                    "stage": "code_generation",
+                    "provider": "groq",
+                    "error_code": "MODEL_NOT_FOUND",
+                    "message": "The configured Groq model is unavailable.",
+                    "configured_model": GROQ_MODEL,
+                    "recoverable": True
+                }
+            elif "api key" in error_details.lower():
+                error_details = {
+                    "stage": "code_generation",
+                    "provider": "groq",
+                    "error_code": "INVALID_API_KEY",
+                    "message": "The provided Groq API key is invalid or missing.",
+                    "recoverable": True
+                }
+            else:
+                error_details = {
+                    "stage": "code_generation",
+                    "provider": "groq",
+                    "error_code": "CODE_GENERATION_FAILED",
+                    "message": "An error occurred during code generation with Groq.",
+                    "recoverable": False
+                }
+        results_store[paper_id] = {"status": "error", "stage": results_store[paper_id].get("stage", 0), "error": error_details}

@@ -22,3 +22,7 @@ class FigureData(BaseModel):
     caption: Optional[str] = None
     page_number: Optional[int] = None
     extraction_confidence: float = 0.0
+    # Provenance — records which provider/model produced this structured output
+    provider: Optional[str] = None          # e.g., "groq"
+    vision_model: Optional[str] = None      # e.g., "qwen/qwen3.8-27b"
+    vision_error: Optional[str] = None      # set if vision step failed but image was extracted

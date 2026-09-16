@@ -32,6 +32,27 @@ def run_pipeline(pdf_path: str, paper_id: str, on_stage=None) -> dict:
     equations = extract_equations(pdf_path)
     tables    = extract_tables(pdf_path)
 
+    # Capture Stage 2 sub-agent status
+    fig_stats = getattr(parse_figures, "_last_stats", {})
+    fig_status = fig_stats.get("status", "UNKNOWN")
+    eq_status  = "PASS" if equations else "DEGRADED"
+    tbl_status = "PASS" if tables else "DEGRADED"
+    # Overall Stage 2 status
+    if fig_status == "PASS" and eq_status == "PASS" and tbl_status == "PASS":
+        stage2_status = "PASS"
+    elif fig_status == "FAILED" and eq_status == "PASS" and tbl_status == "PASS":
+        stage2_status = "DEGRADED"
+    elif fig_status == "FAILED" and eq_status == "FAILED" and tbl_status == "FAILED":
+        stage2_status = "FAILED"
+    else:
+        stage2_status = "DEGRADED"
+
+    logger.info(
+        f"Stage 2 sub-agents: figures={fig_status}, "
+        f"equations={eq_status}, tables={tbl_status} "
+        f"-> overall={stage2_status}"
+    )
+
     # Stage 2 merge
     multimodal = merge_multimodal(text_context, figures, equations, tables)
 
@@ -53,8 +74,11 @@ def run_pipeline(pdf_path: str, paper_id: str, on_stage=None) -> dict:
             "error_report": None,
             "attempts": 1,
             "figures_extracted": len(figures),
+            "figures_structured": fig_stats.get("structured", 0),
             "equations_extracted": len(equations),
             "tables_extracted": len(tables),
+            "stage2_status": stage2_status,
+            "stage2_figures": fig_stats,
         }
 
     from agents.stage5_executor_validator import execute_and_validate
@@ -95,8 +119,11 @@ def run_pipeline(pdf_path: str, paper_id: str, on_stage=None) -> dict:
         "error_report": error_report if not passed else None,
         "attempts": ues.retry_count + 1,
         "figures_extracted": len(figures),
+        "figures_structured": fig_stats.get("structured", 0),
         "equations_extracted": len(equations),
         "tables_extracted": len(tables),
+        "stage2_status": stage2_status,
+        "stage2_figures": fig_stats,
     }
 
     logger.info(f"=== MRep Pipeline END: {paper_id} | Score: {fidelity_score:.2%} ===")
